@@ -62,3 +62,37 @@ Codex wurde eingesetzt für:
 - Formulierung dieser README
 
 Die Projektlogik, das Datenmodell und die kreative Erweiterung wurden gemeinsam geplant und können vor der Abgabe weiter angepasst werden.
+
+# Molitor's Cafe Booking App
+
+## Projekt starten
+
+### Backend starten
+```bash
+uv run uvicorn wiwiss_booking.api:app --reload
+```
+
+### Frontend starten
+```bash
+uv run streamlit run src/wiwiss_booking/frontend.py
+```
+
+## Beschreibung
+
+Diese Anwendung ist ein Café-Buchungssystem mit:
+
+- FastAPI Backend
+- Streamlit Frontend
+- SQLite Datenbank
+
+## Wichtige Dateien
+
+- `frontend.py` → Benutzeroberfläche
+- `api.py` → Backend/API
+- `database.py` → Datenbankverbindung
+- `models.py` → Datenmodelle
+- `analytics.py` → Analysen und Statistiken
+
+## Hinweis
+
+`uv.lock` wurde automatisch generiert und verwaltet die Paketversionen des Projekts.
