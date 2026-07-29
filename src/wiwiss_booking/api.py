@@ -4,8 +4,27 @@ from fastapi import FastAPI, HTTPException, Query
 from dateutil.relativedelta import relativedelta
 
 from wiwiss_booking.analytics import dashboard_summary, forecast_profit, income_statement
-from wiwiss_booking.database import create_booking, create_bookings, delete_booking, init_db, list_bookings
-from wiwiss_booking.models import Booking, BookingCreate, DashboardSummary, ForecastPoint, IncomeStatement, RecurringBookingCreate
+from wiwiss_booking.database import (
+    authenticate_user,
+    create_booking,
+    create_bookings,
+    create_user,
+    delete_booking,
+    init_db,
+    list_bookings,
+    list_users,
+)
+from wiwiss_booking.models import (
+    Booking,
+    BookingCreate,
+    DashboardSummary,
+    ForecastPoint,
+    IncomeStatement,
+    LoginRequest,
+    RecurringBookingCreate,
+    User,
+    UserCreate,
+)
 
 
 app = FastAPI(title="Molitor's Cafe API")
@@ -24,6 +43,27 @@ def startup() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/login", response_model=User)
+def login(login_request: LoginRequest) -> User:
+    user = authenticate_user(login_request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Benutzername oder Passwort ist falsch")
+    return user
+
+
+@app.get("/users", response_model=list[User])
+def get_users() -> list[User]:
+    return list_users()
+
+
+@app.post("/users", response_model=User)
+def add_user(user: UserCreate) -> User:
+    try:
+        return create_user(user)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @app.post("/bookings", response_model=Booking)

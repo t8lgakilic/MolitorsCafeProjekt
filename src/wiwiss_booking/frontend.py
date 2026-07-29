@@ -198,6 +198,91 @@ def api_delete(path: str):
     return response.json()
 
 
+def show_login() -> None:
+    st.title("Molitor's Cafe")
+    st.subheader("Anmelden")
+    with st.form("login_form"):
+        username = st.text_input("Benutzername")
+        password = st.text_input("Passwort", type="password")
+        submitted = st.form_submit_button("Einloggen", type="primary")
+
+    if submitted:
+        try:
+            user = api_post("/login", {"username": username, "password": password})
+        except requests.HTTPError as error:
+            if error.response is not None and error.response.status_code == 401:
+                st.error("Benutzername oder Passwort ist falsch.")
+                return
+            st.error("Login konnte nicht geprüft werden. Bitte Backend prüfen.")
+            return
+        except requests.RequestException:
+            st.error("Login konnte nicht geprüft werden. Bitte Backend prüfen.")
+            return
+        except ValueError as error:
+            st.error(f"Login fehlgeschlagen: {error}")
+            return
+
+        st.session_state["user"] = user
+        st.rerun()
+
+    with st.expander("Zugangsdaten anzeigen"):
+        credentials = pd.DataFrame(
+            [
+                {"Benutzername": "kai", "Passwort": "cafe2026"},
+                {"Benutzername": "rüdiger", "Passwort": "cafe2026"},
+                {"Benutzername": "tah", "Passwort": "cafe2026"},
+                {"Benutzername": "güler", "Passwort": "cafe2026"},
+                {"Benutzername": "yıldız", "Passwort": "cafe2026"},
+                {"Benutzername": "admin", "Passwort": "cafe2026"},
+            ]
+        )
+        st.dataframe(credentials, width="stretch", hide_index=True)
+
+
+def show_user_management() -> None:
+    current_user = st.session_state.get("user", {})
+    if current_user.get("role") != "admin":
+        st.info("Benutzerverwaltung ist nur für Admins sichtbar.")
+        return
+
+    with st.form("user_form", clear_on_submit=True):
+        left, middle, right = st.columns([2, 2, 1])
+        username = left.text_input("Benutzername")
+        password = middle.text_input("Passwort", type="password")
+        role = right.selectbox("Rolle", ["user", "admin"])
+        submitted = st.form_submit_button("Benutzer anlegen", type="primary")
+
+    if submitted:
+        try:
+            api_post("/users", {"username": username, "password": password, "role": role})
+        except requests.HTTPError as error:
+            if error.response is not None and error.response.status_code == 409:
+                st.error("Dieser Benutzername ist bereits vergeben.")
+                return
+            st.error("Benutzer konnte nicht gespeichert werden.")
+            return
+        except ValueError as error:
+            st.error(f"Benutzer konnte nicht gespeichert werden: {error}")
+            return
+        except requests.RequestException:
+            st.error("Benutzer konnte nicht gespeichert werden. Bitte Backend prüfen.")
+            return
+        st.success("Benutzer gespeichert.")
+
+    try:
+        users = api_get("/users")
+    except requests.RequestException:
+        st.error("Benutzer konnten nicht geladen werden. Bitte Backend prüfen.")
+        return
+
+    if users:
+        df = pd.DataFrame(users)
+        df = df[["id", "username", "role", "created_at"]].rename(
+            columns={"id": "ID", "username": "Benutzername", "role": "Rolle", "created_at": "Erstellt am"}
+        )
+        st.dataframe(df, width="stretch", hide_index=True)
+
+
 def show_booking_form() -> None:
     with st.form("booking_form", clear_on_submit=True):
         left, right = st.columns(2)
@@ -405,7 +490,6 @@ def show_forecast() -> None:
 def main() -> None:
     st.set_page_config(page_title="Molitor's Cafe", page_icon="EUR", layout="wide")
     apply_theme()
-    st.title("Molitor's Cafe")
 
     try:
         api_get("/health")
@@ -413,19 +497,40 @@ def main() -> None:
         st.error("Backend nicht erreichbar. Bitte FastAPI starten.")
         st.stop()
 
-    tab_new, tab_list, tab_analysis, tab_dashboard, tab_forecast = st.tabs(
-        ["Neue Buchung", "Buchungen", "GuV", "Dashboard", "Forecast"]
-    )
+    if "user" not in st.session_state:
+        show_login()
+        st.stop()
+
+    current_user = st.session_state["user"]
+    header_left, header_right = st.columns([4, 1])
+    header_left.title("Molitor's Cafe")
+    header_right.caption(f"Angemeldet: {current_user['username']}")
+    if header_right.button("Logout"):
+        del st.session_state["user"]
+        st.rerun()
+
+    is_admin = current_user.get("role") == "admin"
+    tab_labels = ["Neue Buchung", "Buchungen"]
+    if is_admin:
+        tab_labels.extend(["GuV", "Dashboard", "Forecast", "Benutzer"])
+
+    tabs = st.tabs(tab_labels)
+    tab_new, tab_list = tabs[:2]
     with tab_new:
         show_booking_form()
     with tab_list:
         show_bookings()
-    with tab_analysis:
-        show_income_statement()
-    with tab_dashboard:
-        show_dashboard()
-    with tab_forecast:
-        show_forecast()
+
+    if is_admin:
+        tab_analysis, tab_dashboard, tab_forecast, tab_users = tabs[2:]
+        with tab_analysis:
+            show_income_statement()
+        with tab_dashboard:
+            show_dashboard()
+        with tab_forecast:
+            show_forecast()
+        with tab_users:
+            show_user_management()
 
 
 if __name__ == "__main__":

@@ -2,10 +2,41 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 
 BookingType = Literal["income", "expense"]
+UserRole = Literal["admin", "user"]
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=40)
+    password: SecretStr = Field(min_length=4, max_length=80)
+    role: UserRole = "user"
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def clean_username(cls, value: str) -> str:
+        return str(value).strip().lower()
+
+
+class User(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    role: UserRole
+    created_at: datetime
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=40)
+    password: SecretStr = Field(min_length=4, max_length=80)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def clean_username(cls, value: str) -> str:
+        return str(value).strip().lower()
 
 
 class BookingCreate(BaseModel):
