@@ -325,10 +325,6 @@ def show_booking_form() -> None:
         else:
             st.success(f"{len(inserted)} periodische Buchungen gespeichert.")
 
-        if payload["booking_type"] == "income" and float(payload["amount"]) > 5000:
-            st.success("⚽ 🏆 🎉 Glückwunsch! Eine Einnahme über 5.000 EUR wurde gespeichert!")
-            st.balloons()
-
 
 def show_bookings() -> None:
     try:
